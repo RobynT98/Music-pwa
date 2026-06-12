@@ -1,0 +1,15 @@
+[
+  {
+    "id": "example-song",
+    "title": "Dear Little Brother",
+    "artist": "DarkAcademiaWizard",
+    "category": "Harry Potter What If",
+    "year": 2026,
+    "tags": ["dark academia", "emotional", "orchestral"],
+    "audio": "media/example-song.mp3",
+    "video": "https://www.youtube.com/",
+    "cover": "covers/example-cover.jpg",
+    "lyricsSuno": "lyrics/example-suno.txt",
+    "lyricsClean": "lyrics/example-clean.txt"
+  }
+]

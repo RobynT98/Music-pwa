@@ -1,54 +1,168 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DarkAcademiaWizard Music Vault</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="manifest" href="manifest.json" />
+  <link rel="manifest" href="manifest.webmanifest" />
 </head>
 <body>
-  <header>
+  <header class="hero">
+    <p class="eyebrow">PWA Music Library</p>
     <h1>DarkAcademiaWizard Music Vault</h1>
-    <p>Music, lyrics and videos</p>
+    <p class="subtitle">Ladda upp låtar, skriv lyrics, skapa spellistor och spara allt lokalt i webbläsaren.</p>
   </header>
 
+  <nav class="tabs">
+    <button class="tab active" data-tab="library">Bibliotek</button>
+    <button class="tab" data-tab="editor">Lägg till / redigera</button>
+    <button class="tab" data-tab="playlists">Spellistor</button>
+    <button class="tab" data-tab="backup">Backup</button>
+  </nav>
+
   <main>
-    <section class="controls">
-      <input id="searchInput" type="text" placeholder="Sök låt, genre, tagg..." />
-
-      <select id="sortSelect">
-        <option value="title">Sortera: Titel</option>
-        <option value="category">Sortera: Kategori</option>
-        <option value="year">Sortera: År</option>
-      </select>
-    </section>
-
-    <section id="trackList" class="track-list"></section>
-
-    <section id="playerSection" class="player hidden">
-      <h2 id="currentTitle"></h2>
-      <img id="currentCover" alt="Cover" />
-      <audio id="audioPlayer" controls></audio>
-
-      <div class="buttons">
-        <button id="addPlaylistBtn">Lägg till i spellista</button>
-        <a id="videoLink" target="_blank">Öppna musikvideo</a>
+    <section id="library" class="panel active">
+      <div class="toolbar">
+        <input id="searchInput" type="search" placeholder="Sök titel, artist, kategori, tagg..." />
+        <select id="sortSelect">
+          <option value="createdDesc">Nyast först</option>
+          <option value="titleAsc">Titel A-Ö</option>
+          <option value="artistAsc">Artist A-Ö</option>
+          <option value="categoryAsc">Kategori A-Ö</option>
+          <option value="yearDesc">År nyast</option>
+        </select>
       </div>
 
-      <div class="lyrics-buttons">
-        <button id="showSunoLyrics">Suno lyrics</button>
-        <button id="showCleanLyrics">Ren text</button>
+      <div id="trackGrid" class="track-grid"></div>
+      <p id="emptyLibrary" class="empty">Inga låtar än. Gå till “Lägg till / redigera”.</p>
+    </section>
+
+    <section id="editor" class="panel">
+      <form id="trackForm" class="card form-card">
+        <input type="hidden" id="trackId" />
+        <h2 id="formTitle">Lägg till låt</h2>
+
+        <div class="form-grid">
+          <label>Titel
+            <input id="titleInput" required placeholder="Dear Little Brother" />
+          </label>
+
+          <label>Artist
+            <input id="artistInput" placeholder="DarkAcademiaWizard" />
+          </label>
+
+          <label>Kategori
+            <input id="categoryInput" placeholder="Harry Potter What If" />
+          </label>
+
+          <label>År
+            <input id="yearInput" type="number" min="1900" max="3000" placeholder="2026" />
+          </label>
+
+          <label>Tags, separera med komma
+            <input id="tagsInput" placeholder="dark academia, emotional, orchestral" />
+          </label>
+
+          <label>Musikvideo-länk
+            <input id="videoInput" type="url" placeholder="https://..." />
+          </label>
+        </div>
+
+        <div class="file-row">
+          <label>Ljudfil
+            <input id="audioInput" type="file" accept="audio/*" />
+          </label>
+
+          <label>Coverbild
+            <input id="coverInput" type="file" accept="image/*" />
+          </label>
+        </div>
+
+        <div class="lyrics-editor">
+          <label>Lyrics - Suno-version
+            <textarea id="lyricsSunoInput" rows="12" placeholder="[Verse 1]"></textarea>
+          </label>
+
+          <label>Lyrics - ren text
+            <textarea id="lyricsCleanInput" rows="12" placeholder="Text utan versmarkeringar"></textarea>
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="submit">Spara låt</button>
+          <button type="button" id="newTrackBtn" class="secondary">Ny tom låt</button>
+          <button type="button" id="deleteTrackBtn" class="danger hidden">Radera låt</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="playlists" class="panel">
+      <div class="card">
+        <h2>Spellistor</h2>
+        <div class="playlist-create">
+          <input id="playlistNameInput" placeholder="Ny spellista" />
+          <button id="createPlaylistBtn">Skapa</button>
+        </div>
+        <div id="playlistArea"></div>
+      </div>
+    </section>
+
+    <section id="backup" class="panel">
+      <div class="card">
+        <h2>Backup</h2>
+        <p>Export sparar låtar, lyrics, covers och spellistor i en JSON-fil.</p>
+        <div class="actions">
+          <button id="exportBtn">Exportera allt</button>
+
+          <label class="import-label">Importera backup
+            <input id="importInput" type="file" accept="application/json" />
+          </label>
+
+          <button id="clearAllBtn" class="danger">Rensa hela vaulten</button>
+        </div>
+      </div>
+    </section>
+
+    <aside id="player" class="player hidden">
+      <div class="player-main">
+        <img id="playerCover" alt="Cover" />
+        <div>
+          <h2 id="playerTitle"></h2>
+          <p id="playerMeta"></p>
+          <audio id="audioPlayer" controls></audio>
+
+          <div class="actions compact">
+            <button id="editCurrentBtn">Redigera</button>
+            <a id="videoLink" target="_blank" rel="noopener">Musikvideo</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="lyrics-switch">
+        <button id="showSunoBtn" class="secondary">Suno lyrics</button>
+        <button id="showCleanBtn" class="secondary">Ren text</button>
       </div>
 
       <pre id="lyricsBox"></pre>
-    </section>
 
-    <section class="playlist">
-      <h2>Min spellista</h2>
-      <ul id="playlistList"></ul>
-    </section>
+      <div class="add-to-playlist">
+        <select id="addPlaylistSelect"></select>
+        <button id="addToPlaylistBtn">Lägg till i spellista</button>
+      </div>
+    </aside>
   </main>
+
+  <template id="trackCardTemplate">
+    <article class="track-card">
+      <img class="track-cover" alt="Cover" />
+      <div>
+        <h3 class="track-title"></h3>
+        <p class="track-meta"></p>
+        <p class="track-tags"></p>
+      </div>
+    </article>
+  </template>
 
   <script src="app.js"></script>
 </body>

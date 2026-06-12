@@ -1,15 +1,16 @@
 {
   "name": "DarkAcademiaWizard Music Vault",
   "short_name": "Music Vault",
-  "start_url": "index.html",
+  "description": "Din personliga musik- och lyricsapp.",
+  "start_url": "./",
   "display": "standalone",
-  "background_color": "#140b0b",
-  "theme_color": "#6e1f2b",
+  "background_color": "#12090b",
+  "theme_color": "#7b1f2d",
   "icons": [
     {
-      "src": "covers/example-cover.jpg",
-      "sizes": "512x512",
-      "type": "image/jpeg"
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ]
 }

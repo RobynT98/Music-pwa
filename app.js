@@ -1,3 +1,7 @@
+
+navigator.serviceWorker?.getRegistrations?.().then(registrations => {
+  registrations.forEach(registration => registration.unregister());
+});
 const DB_NAME = "darkacademiawizard-music-vault";
 const DB_VERSION = 3;
 const TRACK_STORE = "tracks";

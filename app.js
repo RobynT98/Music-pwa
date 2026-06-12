@@ -1,5 +1,5 @@
 const DB_NAME = "darkacademiawizard-music-vault";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const TRACK_STORE = "tracks";
 const PLAYLIST_STORE = "playlists";
 
@@ -7,6 +7,8 @@ let db;
 let tracks = [];
 let playlists = [];
 let currentTrack = null;
+let currentAudioUrl = null;
+let currentCoverUrl = null;
 
 const $ = id => document.getElementById(id);
 
@@ -78,9 +80,22 @@ function clear(name) {
   });
 }
 
+function getCoverSource(track) {
+  if (track.coverBlob) return URL.createObjectURL(track.coverBlob);
+  if (track.coverDataUrl) return track.coverDataUrl;
+  return fallbackCover;
+}
+
+function getAudioSource(track) {
+  if (track.audioBlob) return URL.createObjectURL(track.audioBlob);
+  if (track.audioDataUrl) return track.audioDataUrl;
+  return "";
+}
+
 async function refreshData() {
   tracks = await getAll(TRACK_STORE);
   playlists = await getAll(PLAYLIST_STORE);
+
   renderTracks();
   renderPlaylists();
   renderPlaylistSelect();
@@ -127,9 +142,8 @@ function renderTracks() {
 
   list.forEach(track => {
     const node = template.content.cloneNode(true);
-    const cover = node.querySelector(".track-cover");
 
-    cover.src = track.coverBlob ? URL.createObjectURL(track.coverBlob) : fallbackCover;
+    node.querySelector(".track-cover").src = getCoverSource(track);
     node.querySelector(".track-title").textContent = track.title || "Utan titel";
     node.querySelector(".track-meta").textContent =
       `${track.artist || "Okänd artist"} • ${track.category || "Okategori"} • ${track.year || "Utan år"}`;
@@ -147,14 +161,20 @@ function playTrack(id) {
 
   currentTrack = track;
 
+  if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
+  if (currentCoverUrl) URL.revokeObjectURL(currentCoverUrl);
+
+  currentAudioUrl = getAudioSource(track);
+  currentCoverUrl = getCoverSource(track);
+
   $("player").classList.remove("hidden");
-  $("playerCover").src = track.coverBlob ? URL.createObjectURL(track.coverBlob) : fallbackCover;
+  $("playerCover").src = currentCoverUrl;
   $("playerTitle").textContent = track.title || "Utan titel";
   $("playerMeta").textContent =
     `${track.artist || "Okänd artist"} • ${track.category || "Okategori"} • ${track.year || "Utan år"}`;
 
-  $("audioPlayer").src = track.audioBlob ? URL.createObjectURL(track.audioBlob) : "";
-  $("lyricsBox").textContent = track.lyricsSuno || track.lyricsClean || "";
+  $("audioPlayer").src = currentAudioUrl;
+  $("lyricsBox").textContent = track.lyricsSuno || track.lyricsClean || "Ingen lyrics sparad ännu.";
 
   if (track.videoUrl) {
     $("videoLink").href = track.videoUrl;
@@ -207,10 +227,16 @@ async function saveTrack(event) {
       videoUrl: $("videoInput").value.trim(),
       lyricsSuno: $("lyricsSunoInput").value,
       lyricsClean: $("lyricsCleanInput").value,
+
       audioBlob: audioFile || existing?.audioBlob || null,
       coverBlob: coverFile || existing?.coverBlob || null,
+
+      audioDataUrl: existing?.audioDataUrl || "",
+      coverDataUrl: existing?.coverDataUrl || "",
+
       audioName: audioFile?.name || existing?.audioName || "",
       coverName: coverFile?.name || existing?.coverName || "",
+
       createdAt: existing?.createdAt || Date.now(),
       updatedAt: Date.now()
     };
@@ -230,7 +256,7 @@ async function saveTrack(event) {
     alert("Låten sparades.");
   } catch (error) {
     console.error(error);
-    alert("Kunde inte spara låten. Testa en mindre ljudfil eller rensa webbplatsdata.");
+    alert("Kunde inte spara låten. Testa en mindre fil eller rensa webbplatsdata.");
   }
 }
 
@@ -276,6 +302,14 @@ function renderPlaylistSelect() {
   const select = $("addPlaylistSelect");
   select.innerHTML = "";
 
+  if (playlists.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Ingen spellista skapad";
+    select.appendChild(option);
+    return;
+  }
+
   playlists.forEach(playlist => {
     const option = document.createElement("option");
     option.value = playlist.id;
@@ -288,7 +322,10 @@ async function addCurrentToPlaylist() {
   if (!currentTrack) return;
 
   const playlist = playlists.find(p => p.id === $("addPlaylistSelect").value);
-  if (!playlist) return;
+  if (!playlist) {
+    alert("Skapa en spellista först.");
+    return;
+  }
 
   if (!playlist.trackIds.includes(currentTrack.id)) {
     playlist.trackIds.push(currentTrack.id);
@@ -296,6 +333,8 @@ async function addCurrentToPlaylist() {
 
   await put(PLAYLIST_STORE, playlist);
   await refreshData();
+
+  alert("Tillagd i spellista.");
 }
 
 function renderPlaylists() {
@@ -310,7 +349,6 @@ function renderPlaylists() {
   playlists.forEach(playlist => {
     const box = document.createElement("div");
     box.className = "playlist-box";
-
     box.innerHTML = `<h3>${playlist.name}</h3>`;
 
     playlist.trackIds.forEach(trackId => {
@@ -319,7 +357,6 @@ function renderPlaylists() {
 
       const row = document.createElement("div");
       row.className = "playlist-track";
-
       row.innerHTML = `
         <span>${track.title}</span>
         <button class="secondary">Spela</button>
@@ -342,6 +379,106 @@ function renderPlaylists() {
   });
 }
 
+function blobToBase64(blob) {
+  return new Promise(resolve => {
+    if (!blob) return resolve("");
+
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function base64ToBlob(dataUrl) {
+  if (!dataUrl) return null;
+
+  const parts = dataUrl.split(",");
+  const mime = parts[0].match(/:(.*?);/)?.[1] || "application/octet-stream";
+  const binary = atob(parts[1]);
+  const array = [];
+
+  for (let i = 0; i < binary.length; i++) {
+    array.push(binary.charCodeAt(i));
+  }
+
+  return new Blob([new Uint8Array(array)], { type: mime });
+}
+
+async function exportBackup() {
+  const exportTracks = [];
+
+  for (const track of tracks) {
+    exportTracks.push({
+      ...track,
+      audioBlob: undefined,
+      coverBlob: undefined,
+      audioBackup: await blobToBase64(track.audioBlob),
+      coverBackup: await blobToBase64(track.coverBlob)
+    });
+  }
+
+  const backup = {
+    app: "DarkAcademiaWizard Music Vault",
+    version: 3,
+    exportedAt: new Date().toISOString(),
+    tracks: exportTracks,
+    playlists
+  };
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {
+    type: "application/json"
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `darkacademiawizard-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
+async function importBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+
+    if (!Array.isArray(data.tracks) || !Array.isArray(data.playlists)) {
+      alert("Fel backupformat.");
+      return;
+    }
+
+    for (const track of data.tracks) {
+      const importedTrack = {
+        ...track,
+        audioBlob: track.audioBackup ? base64ToBlob(track.audioBackup) : track.audioBlob || null,
+        coverBlob: track.coverBackup ? base64ToBlob(track.coverBackup) : track.coverBlob || null
+      };
+
+      delete importedTrack.audioBackup;
+      delete importedTrack.coverBackup;
+
+      await put(TRACK_STORE, importedTrack);
+    }
+
+    for (const playlist of data.playlists) {
+      await put(PLAYLIST_STORE, playlist);
+    }
+
+    await refreshData();
+    alert("Backup importerad.");
+  } catch (error) {
+    console.error(error);
+    alert("Kunde inte importera backup.");
+  }
+
+  event.target.value = "";
+}
+
 function bindEvents() {
   document.querySelectorAll(".tab").forEach(btn => {
     btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
@@ -358,15 +495,20 @@ function bindEvents() {
   });
 
   $("showSunoBtn").addEventListener("click", () => {
-    if (currentTrack) $("lyricsBox").textContent = currentTrack.lyricsSuno || "";
+    if (!currentTrack) return;
+    $("lyricsBox").textContent = currentTrack.lyricsSuno || "Ingen Suno-version sparad.";
   });
 
   $("showCleanBtn").addEventListener("click", () => {
-    if (currentTrack) $("lyricsBox").textContent = currentTrack.lyricsClean || "";
+    if (!currentTrack) return;
+    $("lyricsBox").textContent = currentTrack.lyricsClean || "Ingen ren text sparad.";
   });
 
   $("createPlaylistBtn").addEventListener("click", createPlaylist);
   $("addToPlaylistBtn").addEventListener("click", addCurrentToPlaylist);
+
+  $("exportBtn").addEventListener("click", exportBackup);
+  $("importInput").addEventListener("change", importBackup);
 
   $("clearAllBtn").addEventListener("click", async () => {
     if (!confirm("Rensa hela vaulten?")) return;
@@ -387,4 +529,7 @@ async function init() {
   }
 }
 
-init();
+init().catch(error => {
+  console.error(error);
+  alert("Appen kunde inte starta.");
+});

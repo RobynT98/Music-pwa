@@ -1,4 +1,4 @@
-const CACHE = "darkacademiawizard-v1";
+const CACHE = "darkacademiawizard-v2";
 
 const FILES = [
   "./",

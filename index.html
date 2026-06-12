@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DarkAcademiaWizard Music Vault</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json" />
+</head>
+<body>
+  <header>
+    <h1>DarkAcademiaWizard Music Vault</h1>
+    <p>Music, lyrics and videos</p>
+  </header>
+
+  <main>
+    <section class="controls">
+      <input id="searchInput" type="text" placeholder="Sök låt, genre, tagg..." />
+
+      <select id="sortSelect">
+        <option value="title">Sortera: Titel</option>
+        <option value="category">Sortera: Kategori</option>
+        <option value="year">Sortera: År</option>
+      </select>
+    </section>
+
+    <section id="trackList" class="track-list"></section>
+
+    <section id="playerSection" class="player hidden">
+      <h2 id="currentTitle"></h2>
+      <img id="currentCover" alt="Cover" />
+      <audio id="audioPlayer" controls></audio>
+
+      <div class="buttons">
+        <button id="addPlaylistBtn">Lägg till i spellista</button>
+        <a id="videoLink" target="_blank">Öppna musikvideo</a>
+      </div>
+
+      <div class="lyrics-buttons">
+        <button id="showSunoLyrics">Suno lyrics</button>
+        <button id="showCleanLyrics">Ren text</button>
+      </div>
+
+      <pre id="lyricsBox"></pre>
+    </section>
+
+    <section class="playlist">
+      <h2>Min spellista</h2>
+      <ul id="playlistList"></ul>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
